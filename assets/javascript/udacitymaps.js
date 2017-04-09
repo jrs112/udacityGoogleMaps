@@ -13,6 +13,10 @@
         // styles: styles,
         mapTypeControl: false
       });
+      var timeAutocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("search-within-time-text"));
+      var zoomAutocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("zoom-to-area-text"));
       var locations = [
       {title: "park ave penthouse", location: {lat: 40.7713024, lng: -73.9632393}},
       {title: "Chelsea Loft", location: {lat: 40.7444883, lng: -73.9949465}},
@@ -183,6 +187,32 @@
       }
     }
 
+    function displayDirections(origin) {
+      hideListings();
+      var directionsService = new google.maps.DirectionsService;
+      var destinationAddress =
+        document.getElementById("search-within-time-text").value;
+      var mode = document.getElementById("mode").value;
+      directionsService.route({
+        origin: origin,
+        destination: destinationAddress,
+        travelMode: google.maps.TravelMode[mode]
+      }, function(response, status) {
+          if (status === google.maps.DirectionsStatus.OK) {
+            var directionsDisplay = new google.maps.DirectionsRenderer({
+              map: map,
+              directions: response,
+              draggable: true,
+              polylineOptions: {
+                strokeColor: "green"
+              }
+            });
+          } else {
+            window.alert("Direction request failed due to " + status);
+          }
+      });
+    }
+
     function searchWithinTime() {
       var distanceMatrixService = new google.maps.DistanceMatrixService;
       var address = document.getElementById("search-within-time-text").value;
@@ -228,7 +258,9 @@
               markers[i].setMap(map);
               atLeastOne = true;
               var infowindow = new google.maps.InfoWindow({
-                content: durationText + "away" + distanceText
+                content: durationText + "away" + distanceText +
+                "<div><input type=\'button\' value=\'View Route\' onclick=" +
+                "\'displayDirections(&quot;" + origins[i] + "&quot;);\'></input></div>"
               });
               infowindow.open(map, markers[i]);
               markers[i].infowindow = infowindow;
