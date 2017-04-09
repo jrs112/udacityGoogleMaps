@@ -15,7 +15,8 @@
       var locations = [
       {title: "park ave penthouse", location: {lat: 40.7713024, lng: -73.9632393}},
       {title: "Chelsea Loft", location: {lat: 40.7444883, lng: -73.9949465}},
-      {title: "Union Square", location: {lat: 40.7347062, lng: -73.9895759}}
+      {title: "Union Square", location: {lat: 40.7347062, lng: -73.9895759}},
+      {title: "Sagrada Familia", location: {lat: 41.403633, lng: 2.17437}}
       ];
 
       var largeInfowindow = new google.maps.InfoWindow();
@@ -56,6 +57,29 @@
         infowindow.addListener("closeclick", function(){
         infowindow.setMarker(null);
         });
+        var streetViewService = new google.maps.StreetViewService();
+        var radius= 50;
+        function getStreetView(data, status) {
+          if (status === google.maps.StreetViewStatus.OK) {
+            var nearStreetViewLocation = data.location.latLng;
+            var heading = google.maps.geometry.spherical.computeHeading(
+              nearStreetViewLocation, marker.position);
+            infowindow.setContent("<div>" + marker.title + "</div><div id='pano'></div>");
+            var panoramaOptions = {
+              position: nearStreetViewLocation,
+              pov: {
+                heading: heading,
+                pitch: 30
+              }
+            };
+            var panorama = new google.maps.StreetViewPanorama(
+              document.getElementById("pano"), panoramaOptions);
+          } else {
+            infowindow.setContent("<div>" + marker.title + "</div>" + "<div>No Street View Found</div>");
+          }
+        }
+        streetViewService.getPanoramaByLocation(marker.position, radius, getStreetView);
+        infowindow.open(map, marker);
       }
     }
 
