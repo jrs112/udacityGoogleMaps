@@ -1,5 +1,6 @@
      var map;
      var markers = [];
+     var polygon = null;
 
      function initMap() {
       var styles =
@@ -20,6 +21,16 @@
       ];
 
       var largeInfowindow = new google.maps.InfoWindow();
+      var drawingManager = new google.maps.drawing.DrawingManager({
+        drawingMode: google.maps.drawing.OverlayType.POLYGON,
+        drawingControl: true,
+        drawingControlOptions: {
+          position: google.maps.ControlPosition.TOP_LEFT,
+          drawingModes: [
+          google.maps.drawing.OverlayType.POLYGON
+          ]
+        }
+      });
       var defaultIcon = makeMarkerIcon("009155");
       var highlightedIcon = makeMarkerIcon("FFFF24");
 
@@ -47,6 +58,21 @@
       }
       document.getElementById("show-listings").addEventListener("click", showListings);
       document.getElementById("hide-listings").addEventListener("click", hideListings);
+      document.getElementById("toggle-drawing").addEventListener("click", function() {
+        toggleDrawing(drawingManager);
+      });
+      drawingManager.addListener("overlaycomplete", function(event) {
+        if (polygon) {
+          polygon.setMap(null);
+          hideListings();
+        }
+        drawingManager.setDrawingMode(null);
+        polygon = event.overlay;
+        polygon.setEditable(true);
+        searchWithinPolygon();
+        polygon.getPath().addListener("set_at", searchWithinPolygon);
+        polygon.getPath().addListener("insert_at", searchWithinPolygon)
+      });
      }
 
     function populateInfoWindow(marker, infowindow) {
@@ -69,7 +95,7 @@
               position: nearStreetViewLocation,
               pov: {
                 heading: heading,
-                pitch: 30
+                pitch: 15
               }
             };
             var panorama = new google.maps.StreetViewPanorama(
@@ -107,4 +133,25 @@
         new google.maps.Point(10,34),
         new google.maps.Size(21,34));
       return markerImage;
+    }
+
+    function toggleDrawing(drawingManager) {
+      if (drawingManager.map) {
+        drawingManager.setMap(null);
+          if (polygon) {
+            polygon.setMap(null);
+          }
+      } else {
+        drawingManager.setMap(map);
+      }
+    }
+
+    function searchWithinPolygon() {
+      for (var i = 0; i < markers.length; i++) {
+        if (google.maps.geometry.poly.containsLocation(markers[i].position,polygon)) {
+          markers[i].setMap(map);
+        } else {
+          markers[i].setMap(null);
+        }
+      }
     }

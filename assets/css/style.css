@@ -29,3 +29,9 @@ html {
     width: 200px;
     height: 200px;
 }
+
+#toggle-drawing {
+    width: 50%;
+    position: relative;
+    margin-left: 10px;
+}
