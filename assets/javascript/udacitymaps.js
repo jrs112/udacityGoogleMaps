@@ -3,14 +3,14 @@
      var polygon = null;
 
      function initMap() {
-      var styles =
-       [{"featureType":"administrative","elementType":"labels.text.fill","stylers":[{"color":"#444444"}]},{"featureType":"landscape","elementType":"all","stylers":[{"color":"#f2f2f2"}]},{"featureType":"poi","elementType":"all","stylers":[{"visibility":"off"}]},{"featureType":"road","elementType":"all","stylers":[{"saturation":-100},{"lightness":45}]},{"featureType":"road.highway","elementType":"all","stylers":[{"visibility":"simplified"}]},{"featureType":"road.arterial","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"transit","elementType":"all","stylers":[{"visibility":"off"}]},{"featureType":"water","elementType":"all","stylers":[{"color":"#46bcec"},{"visibility":"on"}]}];
+      // var styles =
+      //  [{"featureType":"administrative","elementType":"labels.text.fill","stylers":[{"color":"#444444"}]},{"featureType":"landscape","elementType":"all","stylers":[{"color":"#f2f2f2"}]},{"featureType":"poi","elementType":"all","stylers":[{"visibility":"off"}]},{"featureType":"road","elementType":"all","stylers":[{"saturation":-100},{"lightness":45}]},{"featureType":"road.highway","elementType":"all","stylers":[{"visibility":"simplified"}]},{"featureType":"road.arterial","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"transit","elementType":"all","stylers":[{"visibility":"off"}]},{"featureType":"water","elementType":"all","stylers":[{"color":"#46bcec"},{"visibility":"on"}]}];
 
 
       map = new google.maps.Map(document.getElementById("map"), {
         center: {lat: 40.7413549, lng: -73.9980244},
         zoom: 13,
-        styles: styles,
+        // styles: styles,
         mapTypeControl: false
       });
       var locations = [
@@ -60,6 +60,12 @@
       document.getElementById("hide-listings").addEventListener("click", hideListings);
       document.getElementById("toggle-drawing").addEventListener("click", function() {
         toggleDrawing(drawingManager);
+      });
+      document.getElementById("zoom-to-area").addEventListener("click", function() {
+        zoomToArea();
+      });
+      document.getElementById("search-within-time").addEventListener("click", function() {
+        searchWithinTime();
       });
       drawingManager.addListener("overlaycomplete", function(event) {
         if (polygon) {
@@ -152,6 +158,85 @@
           markers[i].setMap(map);
         } else {
           markers[i].setMap(null);
+        }
+      }
+    }
+
+    function zoomToArea() {
+      var geocoder = new google.maps.Geocoder();
+      var address = document.getElementById("zoom-to-area-text").value;
+      if (address === "") {
+        window.alert("You must enter an area, or address.")
+      } else {
+        geocoder.geocode(
+          { address: address,
+            // componentRestrictions: {locality: "United States"}
+          }, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+              map.setCenter(results[0].geometry.location);
+              map.setZoom(15);
+              $("#address-field").text(results[0].formatted_address)
+            } else {
+              window.alert("We cold not find that location.  Try entering a more specific place!");
+            }
+          });
+      }
+    }
+
+    function searchWithinTime() {
+      var distanceMatrixService = new google.maps.DistanceMatrixService;
+      var address = document.getElementById("search-within-time-text").value;
+        if (address === "") {
+          window.alert("you must enter an address.");
+        } else {
+          hideListings();
+          var origins = [];
+          for (var i = 0; i < markers.length; i++) {
+            origins[i] = markers[i].position;
+          }
+          var destination = address;
+          var mode = document.getElementById("mode").value;
+          distanceMatrixService.getDistanceMatrix({
+            origins: origins,
+            destinations: [destination],
+            travelMode: google.maps.TravelMode[mode],
+            unitSystem: google.maps.UnitSystem.IMPERIAL,
+          }, function(response, status) {
+            if (status !== google.maps.DistanceMatrixStatus.OK) {
+              window.alert("Error was: " + status);
+            } else {
+              displayMarkersWithinTime(response);
+              }
+          });
+        }
+    }
+
+    function displayMarkersWithinTime(response) {
+      var maxDuration = document.getElementById("max-duration").value;
+      var origins = response.originAddresses;
+      var destinations = response.destinationAddresses;
+      var atLeastOne = false;
+      for (var i = 0; i < origins.length; i++) {
+        var results = response.rows[i].elements;
+        for (var j = 0; j < results.length; j++) {
+          var element = results[j];
+          if (element.status === "OK") {
+            var distanceText = element.distance.text;
+            var duration = element.duration.value / 60;
+            var durationText = element.duration.text;
+            if (duration <= maxDuration) {
+              markers[i].setMap(map);
+              atLeastOne = true;
+              var infowindow = new google.maps.InfoWindow({
+                content: durationText + "away" + distanceText
+              });
+              infowindow.open(map, markers[i]);
+              markers[i].infowindow = infowindow;
+              google.maps.event.addListener(markers[i], "click", function() {
+                this.infowindow.close();
+              });
+            }
+          }
         }
       }
     }
